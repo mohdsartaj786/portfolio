@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | Mohd Sartaj Hashmi</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .admin-wrap { padding: 40px 0; }
+    .admin-top { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .admin-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 28px; }
+    .lead-card { background: var(--bg-dark); border: 1px solid var(--border); padding: 16px; border-radius: 12px; margin-bottom: 12px; }
+    .lead-meta { font-size: 0.82rem; color: var(--beige-muted); margin-bottom: 6px; }
+    @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container admin-wrap">
+    <div class="admin-top">
+      <div>
+        <span class="section-tag">Full-Stack Control Panel</span>
+        <h1>Portfolio Admin Dashboard</h1>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <input type="password" id="admin-key" placeholder="Enter Admin Key (sartaj786)" style="padding:10px 14px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border); color:var(--beige);" />
+        <button class="btn btn-primary" id="load-btn">Unlock &amp; Load Leads</button>
+        <a href="/" class="btn btn-outline">View Site</a>
+      </div>
+    </div>
+
+    <div class="admin-grid">
+      <form class="inquiry-form" id="add-project-form">
+        <h3>Add New Project to Database</h3>
+        <div class="form-group">
+          <label>Project Title *</label>
+          <input type="text" id="p-title" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="p-category">
+              <option value="web">Web Apps</option>
+              <option value="frontend">Frontend / UI</option>
+              <option value="java">Java &amp; Database</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Badge</label>
+            <input type="text" id="p-badge" value="Live Project" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tech Stack (comma separated) *</label>
+          <input type="text" id="p-tech" placeholder="HTML5,CSS3,Python,MySQL" required />
+        </div>
+        <div class="form-group">
+          <label>Description *</label>
+          <textarea id="p-desc" rows="3" required></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Live URL</label>
+            <input type="url" id="p-live" />
+          </div>
+          <div class="form-group">
+            <label>GitHub Repo URL</label>
+            <input type="url" id="p-repo" />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Project</button>
+        <p id="p-status" class="form-feedback"></p>
+      </form>
+
+      <div class="inquiry-form">
+        <h3>Client Project Inquiries (MySQL)</h3>
+        <div id="leads-container">
+          <p style="color:var(--beige-muted);">Enter your Admin Key above and click <strong>Unlock &amp; Load Leads</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const keyInput = document.getElementById('admin-key');
+    const leadsBox = document.getElementById('leads-container');
+
+    document.getElementById('load-btn').addEventListener('click', async () => {
+      const key = keyInput.value.trim();
+      const res = await fetch('/api/inquiries', { headers: { 'X-Admin-Key': key } });
+      const data = await res.json();
+      if (!data.success) {
+        leadsBox.innerHTML = `<p style="color:#f87171;">${data.error}</p>`;
+        return;
+      }
+      if (data.inquiries.length === 0) {
+        leadsBox.innerHTML = `<p>No client inquiries yet.</p>`;
+        return;
+      }
+      leadsBox.innerHTML = data.inquiries.map(item => `
+        <div class="lead-card">
+          <strong>${item.client_name}</strong> — <span style="color:#4ade80;">${item.package_selected}</span>
+          <div class="lead-meta">${item.client_email} | ${item.client_phone || 'No phone'} | ${item.created_at}</div>
+          <p style="font-size:0.92rem;">${item.message}</p>
+        </div>
+      `).join('');
+    });
+
+    document.getElementById('add-project-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const key = keyInput.value.trim();
+      const payload = {
+        title: document.getElementById('p-title').value,
+        category: document.getElementById('p-category').value,
+        badge: document.getElementById('p-badge').value,
+        tech_stack: document.getElementById('p-tech').value,
+        description: document.getElementById('p-desc').value,
+        live_url: document.getElementById('p-live').value,
+        repo_url: document.getElementById('p-repo').value
+      };
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': key },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      const statusEl = document.getElementById('p-status');
+      statusEl.style.color = data.success ? '#4ade80' : '#f87171';
+      statusEl.textContent = data.success ? data.message : data.error;
+      if (data.success) e.target.reset();
+    });
+  </script>
+</body>
+</html>
